@@ -1,0 +1,99 @@
+﻿@page "/"
+@using TodoList.Models
+@rendermode InteractiveServer
+@inject TodoList.Data.TodoDbContext DbContext
+
+
+<PageTitle>Todo</PageTitle>
+<div class="container text-center ">
+    <div class="row justify-content-center align-items-center" style="height: 100vh;">
+        <div class="col-12 col-md-8 col-lg-6 ">
+            <div class="d-flex align-items-center p-2 gap-2">
+                <input @bind="newTodo" placeholder="Enter new todo" class="flex-grow-1 form-control" />
+                <button @onclick="AddTodo" class="btn btn-primary text-nowrap">Add todo</button>
+            </div>
+            <div class="d-flex flex-column gap-2 p-2 overflow-auto" style="height:400px;">
+                @foreach (var todo in todos)
+                {
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>@todo.task</div>
+                        <div class="d-flex gap-1 align-items-center">
+                            <input type="checkbox" class="form-check-input" name="name" value="" checked="@todo.status" @onchange="@(async (e) => await UpdateTodoStatus(todo, e))" />
+
+                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal">
+                                Update
+                            </button>
+
+                            <!-- Modal -->
+                            <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h1 class="modal-title fs-5" id="exampleModalLabel">Update Todo</h1>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div>@todo.task</div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-primary">Save changes</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="btn btn-outline-danger" @onclick="@(() => DeleteTodo(todo))">Del</button>
+                        </div>
+
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+
+</div>
+@code {
+    private List<TodoItem> todos = [];
+    private string newTodo = "";
+
+
+    protected override void OnInitialized()
+    {
+        this.fetchData();
+    }
+
+    private void fetchData()
+    {
+        todos = DbContext.todos.OrderBy(item => item.id).ToList();
+    }
+
+    private void AddTodo()
+    {
+        if (!string.IsNullOrWhiteSpace(newTodo))
+        {
+            var td = new TodoItem { task = newTodo };
+            DbContext.todos.Add(td);
+            DbContext.SaveChanges();
+            this.fetchData();
+            newTodo = string.Empty;
+        }
+    }
+    private async Task UpdateTodoStatus(TodoItem todo, ChangeEventArgs e)
+    {
+        //Console.WriteLine(todo.status.ToString());
+        var existingTodo = DbContext.todos.Find(todo.id);
+        if (existingTodo != null)
+        {
+            existingTodo.status = !todo.status;
+            await DbContext.SaveChangesAsync();
+            this.fetchData();
+
+        }
+    }
+    private void DeleteTodo(TodoItem todo)
+    {
+        DbContext.todos.Remove(todo);
+        DbContext.SaveChanges();
+        todos.Remove(todo);
+    }
+}
